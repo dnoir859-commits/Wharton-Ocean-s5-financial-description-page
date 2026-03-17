@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ocean's 5 — Wharton Investment Team</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome for icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <style>
+    :root{
+      --accent:#e63000;
+      --muted:#b05020;
+      --card:#fff5f0;
+      --bg:#fff8f5;
+    }
+    body{ background:var(--bg); color:#3a1a00; }
+    .hero{
+      background: linear-gradient(90deg, rgba(230,80,0,0.08), rgba(255,140,0,0.04));
+      padding: 48px 0;
+    }
+    .navbar{ background:#fff !important; border-bottom: 2px solid #e63000 !important; }
+    .navbar-brand{ color:#e63000 !important; }
+    .nav-link{ color:#b05020 !important; }
+    .nav-link:hover{ color:#e63000 !important; }
+    .btn-primary{ background:#e63000; border-color:#e63000; color:#fff; }
+    .btn-primary:hover{ background:#c22800; border-color:#c22800; }
+    .btn-outline-primary{ color:#e63000; border-color:#e63000; }
+    .btn-outline-primary:hover{ background:#e63000; color:#fff; }
+    .btn-outline-secondary{ color:#ff6a00; border-color:#ff6a00; }
+    .btn-outline-secondary:hover{ background:#ff6a00; color:#fff; }
+    .card{ background:#fff; border: 1px solid #ffd0b0; }
+    .portfolio-table th, .portfolio-table td { vertical-align: middle; font-size: .95rem; }
+    .table-light{ background:#fff5f0 !important; }
+    .small-muted { color:var(--muted); font-size:.9rem; }
+    .badge-profit { background:#3d9f40; color:#fff; }
+    .badge-loss { background:#e63000; color:#fff; }
+    footer { padding:24px 0; color:#b05020; font-size:.9rem; border-top: 2px solid #ffd0b0 !important; }
+    .msg-box { max-height:320px; overflow:auto; }
+    .card-shadow { box-shadow: 0 6px 18px rgba(230,80,0,0.10); }
+    .disclaimer { font-size:.85rem; color:#5a2000; background:#ffe5d0; padding:10px; border-radius:6px; }
+    .chart-height { height: 200px; }
+    .pie-chart-height { height: 260px; }
+    h3, h5, h6 { color:#c22800; }
+    .list-group-item { background:#fff; border-color:#ffd0b0; color:#3a1a00; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light border-bottom">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="#">Ocean's 5</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" title="Toggle navigation menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMain">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="#portfolio">Portfolio</a></li>
+        <li class="nav-item"><a class="nav-link" href="#insights">Insights</a></li>
+        <li class="nav-item"><a class="nav-link" href="#messages">Messaging</a></li>
+        <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <h1 class="display-6 mb-3">Ocean's 5 — Wharton Investment Competition Team</h1>
+        <p class="lead small-muted">We research, trade and present disciplined investment strategies. This site shows our portfolio, performance snapshots and a messaging board for collaboration.</p>
+
+        <div class="mt-4">
+          <a href="#portfolio" class="btn btn-primary me-2"><i class="fa-solid fa-table-list me-2"></i>View Portfolio</a>
+          <a href="#contact" class="btn btn-outline-primary"><i class="fa-solid fa-envelope me-2"></i>Contact Us</a>
+        </div>
+
+        <div class="mt-4 disclaimer">
+          <strong>Disclaimer:</strong> This site is for educational purposes only. Nothing here is professional financial advice. Always do your own research (DYOR) and discuss with us for suggestions.
+        </div>
+      </div>
+
+      <div class="col-lg-5 d-none d-lg-block">
+        <div class="card card-shadow p-3">
+          <canvas id="pieChart" class="pie-chart-height"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container">
+
+    <!-- Portfolio -->
+    <section id="portfolio" class="mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Portfolio Snapshot</h3>
+        <div>
+          <span class="small-muted me-2">Total Market Value:</span>
+          <span class="fw-bold h5" id="totalValue">$0.00</span>
+        </div>
+      </div>
+
+      <div class="card card-body card-shadow">
+        <div class="table-responsive">
+          <table class="table table-hover portfolio-table">
+            <thead class="table-light">
+              <tr>
+                <th>Symbol</th>
+                <th>Qty</th>
+                <th>Price Paid</th>
+                <th>Last Price</th>
+                <th>Day's Change</th>
+                <th>P/L</th>
+                <th>P/L %</th>
+                <th>Market Value (USD)</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioBody">
+              <!-- JS will render rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Insights & actions -->
+    <section id="insights" class="row mb-5">
+      <div class="col-lg-6 mb-3">
+        <div class="card card-shadow p-3 h-100">
+          <h5 class="mb-3">Quick Metrics</h5>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Total Market Profit/Loss <span id="totalPL" class="fw-bold">$0</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Long Market Value <span id="marketLong" class="fw-bold">$0</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Portfolio Count <span id="portfolioCount" class="fw-bold">0</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-6 mb-3">
+        <div class="card card-shadow p-3 h-100">
+          <h5 class="mb-3">Performance (Last 7 days)</h5>
+          <canvas id="lineChart" class="chart-height"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Messaging -->
+    <section id="messages" class="mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Messaging Board</h3>
+        <small class="small-muted">Public messages saved locally. Use this to coordinate trades / ideas.</small>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card card-shadow p-3">
+            <div class="mb-3">
+              <input id="msgName" class="form-control mb-2" placeholder="Your name (e.g., Riya)">
+              <textarea id="msgText" class="form-control mb-2" rows="3" placeholder="Write a short message..."></textarea>
+              <div class="d-flex justify-content-between">
+                <div class="small-muted">Messages are stored securely in the cloud database.</div>
+                <button id="postMsg" class="btn btn-primary">Post</button>
+              </div>
+            </div>
+
+            <hr>
+
+            <div class="msg-box" id="msgList" aria-live="polite">
+              <!-- Messages will appear here -->
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card card-shadow p-3">
+            <h5>Team Members</h5>
+            <ul class="list-unstyled">
+              <li><strong>A</strong> — Portfolio Strategy</li>
+              <li><strong>L</strong> — Research, Valuation & team leader</li>
+              <li><strong>R</strong> — Trading Execution</li>
+              <li><strong>S</strong> — Risk & Compliance</li>
+              <li><strong>P</strong> — Presentation & Pitch</li>
+            </ul>
+
+            <hr>
+
+            <h6>Quick Links</h6>
+            <a class="btn btn-outline-secondary btn-sm mb-2" href="#contact"><i class="fa-solid fa-envelope me-2"></i> Contact Us</a>
+            <a class="btn btn-outline-secondary btn-sm mb-2" href="#"><i class="fa-solid fa-file-lines me-2"></i> Strategy Doc</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="mb-5">
+      <h3>Contact & Advice Requests</h3>
+      <p class="small-muted">Want feedback on your pitch, help preparing for the Wharton Investment Competition, or just want to chat? Send us a message.</p>
+
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="card card-shadow p-3">
+            <form id="contactForm">
+              <div class="mb-2"><input class="form-control" id="contactName" placeholder="Your name" required></div>
+              <div class="mb-2"><input class="form-control" id="contactEmail" placeholder="Email" type="email" required></div>
+              <div class="mb-2"><textarea id="contactMsg" class="form-control" rows="4" placeholder="How can Ocean's 5 help?" required></textarea></div>
+
+              <div class="d-flex gap-2">
+                <button type="button" id="sendMail" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-2"></i>Send Message</button>
+              </div>
+
+              <div class="mt-2 small-muted">We typically respond within 48 hours.</div>
+            </form>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card card-shadow p-3">
+            <h6>Office</h6>
+      
+            <p class="mb-1"><i class="fa-solid fa-envelope me-2"></i><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="741b1711151a0741341319151d185a171b19">[email&#160;protected]</a></p>
+
+            <hr>
+
+            <h6>Subscribe</h6>
+            <p class="small-muted">Get a monthly newsletter of our ideas.</p>
+            <div class="d-flex">
+              <input id="subscribeEmail" class="form-control me-2" placeholder="Email address">
+              <button id="subscribeBtn" class="btn btn-outline-primary">Subscribe</button>
+            </div>
+            <div class="mt-2 small-muted" id="subscribeMsg"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="border-top">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>© Ocean's 5 — Wharton Investment Competition Team</div>
+    <div class="small-muted">Built for demonstration. Not for professional financial advice. This website is for school students to discuss and debate about finance topics with the team.</div>
+  </div>
+</footer>
+
+<!-- Bootstrap JS bundle -->
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+const portfolio = [
+  { symbol: "AMD", qty: 65, pricePaid: 232.42, lastPrice: 259.67, daysChange: 6.75 },
+  { symbol: "MA", qty: 4, pricePaid: 559.95, lastPrice: 572.36, daysChange: -1.31 },
+  { symbol: "PLD", qty: 350, pricePaid: 114.03, lastPrice: 127.08, daysChange: 0.65 },
+  { symbol: "AEIS", qty: 165, pricePaid: 181.10, lastPrice: 205.12, daysChange: 2.51 },
+  { symbol: "FSLR", qty: 130, pricePaid: 227.34, lastPrice: 247.69, daysChange: 6.28 },
+  { symbol: "GOOGL", qty: 16, pricePaid: 256.76, lastPrice: 269.27, daysChange: 9.35 },
+  { symbol: "EQIX", qty: 6, pricePaid: 830.23, lastPrice: 842.77, daysChange: 3.28 },
+  { symbol: "UNH", qty: 40, pricePaid: 363.24, lastPrice: 365.98, daysChange: 3.48 }
+];
+
+// compute derived metrics
+function computeMetrics() {
+  let totalValue = 0;
+  let totalGain = 0;
+  for (let p of portfolio) {
+    totalValue += p.qty * p.lastPrice;
+    totalGain += (p.lastPrice - p.pricePaid) * p.qty;
+  }
+  return {
+    totalValue: totalValue,
+    totalPL: totalGain,
+    count: portfolio.length
+  };
+}
+
+function currency(n){ return n.toLocaleString('en-US',{style:'currency', currency:'USD'}); }
+
+function renderPortfolio() {
+  const tbody = document.getElementById('portfolioBody');
+  tbody.innerHTML = '';
+  for (let p of portfolio) {
+    const marketValue = p.qty * p.lastPrice;
+    const pl = (p.lastPrice - p.pricePaid) * p.qty;
+    const plPct = ((p.lastPrice - p.pricePaid) / p.pricePaid) * 100;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${p.symbol}</strong></td>
+      <td>${p.qty}</td>
+      <td>${currency(p.pricePaid)}</td>
+      <td>${currency(p.lastPrice)}</td>
+      <td class="${p.daysChange>=0? 'text-success':'text-danger'}">${p.daysChange>=0? '+'+p.daysChange.toFixed(2): p.daysChange.toFixed(2)}</td>
+      <td class="${pl>=0? 'text-success':'text-danger'}">${pl>=0? '+'+currency(pl): currency(pl)}</td>
+      <td class="${plPct>=0? 'text-success':'text-danger'}">${plPct>=0? '+'+plPct.toFixed(2)+'%': plPct.toFixed(2)+'%'}</td>
+      <td>${currency(marketValue)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  const metrics = computeMetrics();
+  document.getElementById('totalValue').textContent = currency(metrics.totalValue);
+  document.getElementById('totalPL').textContent = currency(metrics.totalPL);
+  document.getElementById('marketLong').textContent = currency(metrics.totalValue);
+  document.getElementById('portfolioCount').textContent = metrics.count;
+}
+
+// Charts
+function drawCharts(){
+  const pieCtx = document.getElementById('pieChart').getContext('2d');
+  const labels = portfolio.map(p=>p.symbol);
+  const values = portfolio.map(p=> p.qty * p.lastPrice );
+  const total = values.reduce((a, b) => a + b, 0);
+  Chart.register(ChartDataLabels);
+  new Chart(pieCtx, {
+    type: 'pie',
+    data: { labels, datasets: [{ data: values, backgroundColor: ['#e63000','#ff6a00','#ff9a3c','#ffb347','#cc2200','#ff4500','#ff7733','#ffa500'] }]},
+    options: {
+      plugins: {
+        legend: { position: 'right' },
+        datalabels: {
+          color: '#fff',
+          font: { weight: 'bold', size: 11 },
+          formatter: (value, ctx) => {
+            const pct = ((value / total) * 100).toFixed(1);
+            return ctx.chart.data.labels[ctx.dataIndex] + '\n' + pct + '%';
+          }
+        }
+      }
+    }
+  });
+
+  // Simulated 7-day performance trend based on current portfolio value.
+  // Note: In a production environment this would be replaced with historical
+  // price data fetched from a live market data API (e.g. Alpha Vantage).
+  const days = Array.from({length:7}, (_,i)=> i);
+  const base = computeMetrics().totalValue;
+  const series = days.map((d,i)=> base * (1 + (Math.sin(i)/50 + (i-3)/200) ));
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  new Chart(lineCtx, {
+    type: 'line',
+    data: { labels: ['-6d','-5d','-4d','-3d','-2d','-1d','Today'], datasets: [{ label:'Portfolio value', data: series, fill:false, tension:0.3 }]},
+    options: { plugins:{ legend:{ display:false }, datalabels:{ display:false } }, scales:{ y:{ ticks:{ callback: v => '$'+(v/1000).toFixed(0)+'k' } } } }
+  });
+}
+
+function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+// --- Supabase setup ---
+const SUPABASE_URL = 'https://zwvodhszfxphzmkomhqn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dm9kaHN6ZnhwaHpta29taHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2Njk1OTYsImV4cCI6MjA4OTI0NTU5Nn0.Xjl3k-DC0eevdNp-tm1rddXZqdvQIXNeksh46GAyW2Y';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function loadMessages() {
+  const { data, error } = await db.from('messages').select('*').order('id', { ascending: false });
+  if (error) { console.error('Fetch error:', error.message); return []; }
+  return data || [];
+}
+
+async function renderMessages() {
+  const container = document.getElementById('msgList');
+  const msgs = await loadMessages();
+  container.innerHTML = msgs.length ? msgs.map(m => `
+    <div class="mb-2">
+      <div class="d-flex justify-content-between small-muted">
+        <strong>${escapeHtml(m.name)}</strong>
+        <span class="small">${m.timestamp}</span>
+      </div>
+      <div class="mt-1">${escapeHtml(m.text)}</div>
+      <hr>
+    </div>
+  `).join('') : '<div class="text-muted">No messages yet — start the conversation!</div>';
+}
+
+document.getElementById('postMsg').addEventListener('click', async () => {
+  const name = document.getElementById('msgName').value.trim() || 'Anonymous';
+  const text = document.getElementById('msgText').value.trim();
+  if (!text) { alert('Type a short message'); return; }
+
+  const { error } = await db.from('messages').insert({ name, text });
+  if (error) { alert('Error: ' + error.message); return; }
+  document.getElementById('msgText').value = '';
+  await renderMessages();
+});
+
+/* Contact form */
+document.getElementById('sendMail').addEventListener('click', async () => {
+  const n = document.getElementById('contactName').value.trim();
+  const e = document.getElementById('contactEmail').value.trim();
+  const m = document.getElementById('contactMsg').value.trim();
+  if (!n || !e || !m) { alert('Please fill all fields'); return; }
+
+  const { error } = await db.from('contact_requests').insert({ name: n, email: e, message: m });
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Message sent! We will get back to you within 48 hours.');
+  document.getElementById('contactName').value = '';
+  document.getElementById('contactEmail').value = '';
+  document.getElementById('contactMsg').value = '';
+});
+
+/* Newsletter */
+document.getElementById('subscribeBtn').addEventListener('click', async () => {
+  const em = document.getElementById('subscribeEmail').value.trim();
+  if (!em) { document.getElementById('subscribeMsg').textContent = 'Enter an email.'; return; }
+
+  const { error } = await db.from('newsletter').insert({ email: em });
+  if (error) { document.getElementById('subscribeMsg').textContent = 'Error: ' + error.message; return; }
+  document.getElementById('subscribeMsg').textContent = 'Subscribed! You will hear from us monthly.';
+  document.getElementById('subscribeEmail').value = '';
+});
+
+// --- Initialise page ---
+renderPortfolio();
+drawCharts();
+renderMessages();
+
+</script>
+</body>
+</html>
