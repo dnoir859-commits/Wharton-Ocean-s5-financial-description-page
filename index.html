@@ -310,9 +310,9 @@ function drawCharts(){
         datalabels: {
           anchor: 'end',
           align: 'end',
-          offset: 6,
+          offset: 4,
           color: '#3a1a00',
-          font: {weight: 'bold', size: 11},
+          font: {weight: 'bold', size: 10},
           formatter: (value, ctx) => {
             const pct = ((value / total) * 100).toFixed(1);
             return ctx.chart.data.labels[ctx.dataIndex] + '\n' + pct + '%';
@@ -320,7 +320,7 @@ function drawCharts(){
           textAlign: 'center'
         }
       },
-      layout: {padding: {top: 30, bottom: 40, left: 55, right: 55}}
+      layout: {padding: {top: 30, bottom: 40, left: 70, right: 70}}
     }
   });
 
