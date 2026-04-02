@@ -88,7 +88,7 @@
         </div>
       </div>
       <div class="col-lg-5 d-none d-lg-block">
-        <div class="card card-shadow p-1">
+        <div class="card card-shadow p-3">
           <canvas id="pieChart" class="pie-chart-height"></canvas>
           <div id="pieLegend" class="pie-legend"></div>
         </div>
@@ -255,7 +255,7 @@ const portfolio = [
   { symbol: "UNH", qty: 40, pricePaid: 363.24, lastPrice: 365.98, daysChange: 3.48 }
 ];
 
-//compute derived metrics
+//compute derived metrics: loops over all holdings to sum total market value (qty * lastPrice) and total unrealized gain/loss
 function computeMetrics() {
   let totalValue = 0;
   let totalGain = 0;
@@ -269,8 +269,10 @@ function computeMetrics() {
     count: portfolio.length
   };
 }
+//currency: formats a number as a USD string with commas and two decimal places using the browser locale API
 function currency(n){ return n.toLocaleString('en-US',{style:'currency', currency:'USD'}); }
 
+//renderPortfolio: builds each table row by computing market value (qty * lastPrice), P/L (price difference * qty), and P/L % ((lastPrice - pricePaid) / pricePaid * 100), then updates summary metrics
 function renderPortfolio() {
   const tbody = document.getElementById('portfolioBody');
   tbody.innerHTML = '';
@@ -298,11 +300,15 @@ function renderPortfolio() {
   document.getElementById('portfolioCount').textContent = metrics.count;
 }
 
-//draw charts
+//drawCharts: renders the allocation pie chart with external percentage labels for all segments, and a simulated 7-day line chart using a sine-based trend formula
 function drawCharts(){
   const pieCtx = document.getElementById('pieChart').getContext('2d');
   const labels = portfolio.map(p=>p.symbol);
+
+  //values: each holding's market value (qty * lastPrice), used as pie slice size
   const values = portfolio.map(p=> p.qty * p.lastPrice);
+
+  //total: sum of all market values, used to calculate each slice's percentage
   const total = values.reduce((a, b) => a + b, 0);
   Chart.register(ChartDataLabels);
   new Chart(pieCtx, {
@@ -312,11 +318,15 @@ function drawCharts(){
       plugins: {
         legend: {display: false},
         datalabels: {
+
+          //anchor/align end: positions each label outside its slice rather than inside
           anchor: 'end',
           align: 'end',
-          offset: 4,
+          offset: 6,
           color: '#3a1a00',
           font: {weight: 'bold', size: 10},
+
+          //formatter: calculates slice percentage as (value / total * 100) and returns ticker + percentage for every segment
           formatter: (value, ctx) => {
             const pct = ((value / total) * 100).toFixed(1);
             return ctx.chart.data.labels[ctx.dataIndex] + '\n' + pct + '%';
@@ -324,37 +334,50 @@ function drawCharts(){
           textAlign: 'center'
         }
       },
-      layout: {padding: {top: 30, bottom: 10, left: 70, right: 70}}
+      //padding: provides space around the chart so external labels are not clipped
+      layout: {padding: 40}
     }
   });
   const colors = ['#e63000','#ff6a00','#b8860b','#8b4513','#ff4500','#cc2200','#ff9a3c','#ffa500'];
   const legendEl = document.getElementById('pieLegend');
+
+  //legend: builds a color swatch and ticker label for each holding beneath the chart
   labels.forEach((label, i) => {
     legendEl.innerHTML += `<span class="pie-legend-item"><span class="pie-legend-swatch" style="background:${colors[i]}"></span>${label}</span>`;
   });
 
-  //simulated 7-day performance trend
+  //simulated 7-day performance trend: uses a sine wave plus a linear drift ((i-3)/200) applied to the current total value as the baseline
+
   const days = Array.from({length:7}, (_,i)=> i);
   const base = computeMetrics().totalValue;
+
+  //series: each point scales the base value by a small oscillation (sin(i)/50) and a gradual upward drift ((i-3)/200)
   const series = days.map((d,i)=> base * (1 + (Math.sin(i)/50 + (i-3)/200)));
   const lineCtx = document.getElementById('lineChart').getContext('2d');
+
+  //line chart: displays the 7-day simulated series with y-axis ticks formatted as dollar amounts in thousands
   new Chart(lineCtx, {
     type: 'line',
     data: {labels: ['-6d','-5d','-4d','-3d','-2d','-1d','Today'], datasets: [{label:'Portfolio value', data: series, fill:false, tension:0.3}]},
     options: {plugins:{legend:{display:false}, datalabels:{display:false}}, scales:{y:{ticks:{callback: v => '$'+(v/1000).toFixed(0)+'k'}}}}
   });
 }
+
+//escapeHtml: replaces the five HTML special characters (&, <, >, ", ') with their safe entity equivalents to prevent XSS injection in displayed content
 function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
 
-//Supabase setup
+//Supabase setup: initialises the client with the project URL and public anon key so all database calls use the correct project
 const SUPABASE_URL = 'https://zwvodhszfxphzmkomhqn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dm9kaHN6ZnhwaHpta29taHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2Njk1OTYsImV4cCI6MjA4OTI0NTU5Nn0.Xjl3k-DC0eevdNp-tm1rddXZqdvQIXNeksh46GAyW2Y';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+//loadMessages: queries the messages table ordered by id descending (newest first) and returns the array, or an empty array on error
 async function loadMessages() {
   const { data, error } = await db.from('messages').select('*').order('id', { ascending: false });
   if (error) { console.error('Fetch error:', error.message); return []; }
   return data || [];
 }
+//renderMessages: fetches all messages and injects them as HTML into the message board, or shows a fallback prompt if none exist
 async function renderMessages() {
   const container = document.getElementById('msgList');
   const msgs = await loadMessages();
@@ -367,8 +390,10 @@ async function renderMessages() {
       <div class="mt-1">${escapeHtml(m.text)}</div>
       <hr>
     </div>
-  `).join('') : '<div class="text-muted">No messages yet — start the conversation!</div>';
+  `).join('') : '<div class="text-muted">No messages yet. Start the conversation!</div>';
 }
+
+//postMsg handler: reads the name and message fields, inserts a new row into the messages table, clears the text field, and refreshes the board
 document.getElementById('postMsg').addEventListener('click', async () => {
   const name = document.getElementById('msgName').value.trim() || 'Anonymous';
   const text = document.getElementById('msgText').value.trim();
@@ -379,13 +404,13 @@ document.getElementById('postMsg').addEventListener('click', async () => {
   await renderMessages();
 });
 
-//contact form
+//contact form handler: validates all three fields are filled, inserts the contact request into Supabase, then clears the form on success
 document.getElementById('sendMail').addEventListener('click', async () => {
   const n = document.getElementById('contactName').value.trim();
   const e = document.getElementById('contactEmail').value.trim();
   const m = document.getElementById('contactMsg').value.trim();
   if (!n||!e||!m) { alert('Please fill all fields'); return; }
-  
+
   const {error} = await db.from('contact_requests').insert({ name: n, email: e, message: m });
   if (error) {alert('Error: ' + error.message); return;}
   alert('Message sent! We will get back to you within 48 hours.');
@@ -394,7 +419,7 @@ document.getElementById('sendMail').addEventListener('click', async () => {
   document.getElementById('contactMsg').value = '';
 });
 
-//newsletter
+//newsletter handler: validates the email input, inserts it into the newsletter table, then shows a confirmation message and clears the field
 document.getElementById('subscribeBtn').addEventListener('click', async () => {
   const em = document.getElementById('subscribeEmail').value.trim();
   if (!em) { document.getElementById('subscribeMsg').textContent = 'Enter an email.'; return; }
@@ -404,7 +429,7 @@ document.getElementById('subscribeBtn').addEventListener('click', async () => {
   document.getElementById('subscribeEmail').value = '';
 });
 
-//initialise page
+//initialise page: runs all three render functions on load so the portfolio table, charts, and message board are populated immediately
 renderPortfolio();
 drawCharts();
 renderMessages();
